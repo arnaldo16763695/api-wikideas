@@ -1,29 +1,112 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
-import { PrismaService } from '../prisma.service';
-import {Articles} from '@prisma/client'
+import { PrismaService } from 'src/prisma.service';
+import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class ArticlesService {
-  constructor(private prisma: PrismaService) {}
-  create(createArticleDto: CreateArticleDto) {
-    return 'This action adds a new article';
+  constructor(private prisma: PrismaService) { }
+
+
+  async create(createArticleDto: CreateArticleDto) {
+    try {
+      return await this.prisma.articles.create({
+        data: createArticleDto
+      });
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(`Article with title: ${createArticleDto.title} , already exists`)
+        }
+      }
+    }
   }
 
   findAll() {
-    return this.prisma.articles.findMany();
+    return this.prisma.articles.findMany({
+      where: {
+        deletedAt: false
+      },
+      include: {
+        CategoriesArticle: true
+      }
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} article`;
+  findArticlesByCategory(id: string) {
+    return this.prisma.articles.findMany({
+      where: {
+        deletedAt: false,
+        categoriesArticleId: id
+      },
+      include: {
+        CategoriesArticle: true
+      }
+    });
   }
 
-  update(id: number, updateArticleDto: UpdateArticleDto) {
-    return `This action updates a #${id} article`;
+  async findOne(id: string) {
+    const article = await this.prisma.articles.findUnique({
+      where: {
+        id,
+        deletedAt: false
+      },
+      include: {
+        CategoriesArticle: true
+      }
+    });
+    if (!article) {
+      throw new NotFoundException(`Product with id ${id} not found`)
+    }
+
+    return article
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} article`;
+  async update(id: string, updateArticleDto: UpdateArticleDto) {
+    const article = await this.prisma.articles.findUnique({
+      where: {
+        id,
+        deletedAt: false
+      }
+    })
+
+    if (!article) {
+      throw new NotFoundException(`Product with id ${id} not found`)
+    }
+
+    try {
+      return await this.prisma.articles.update({
+        where: {
+          id,
+          deletedAt: false
+        },
+        data: updateArticleDto
+      })
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(`Product with title: ${updateArticleDto.title} , already exists`)
+        }
+      }
+    }
+  }
+
+  async remove(id: string) {
+    const article = await this.prisma.articles.findUnique({
+      where: { id },
+    });
+
+    if (!article) {
+      throw new NotFoundException(`Product with id ${id} not found`)
+
+    }
+    return this.prisma.articles.update({
+      where: { id },
+      data: {
+        deletedAt: true
+      }
+    });
   }
 }

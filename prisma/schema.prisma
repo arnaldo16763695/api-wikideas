@@ -15,7 +15,7 @@ datasource db {
 
 model Articles {
   id                  String             @id @default(uuid())
-  title               String
+  title               String             @unique
   contentHtml         String
   contentText         String
   createdAt           DateTime           @default(now())
@@ -27,7 +27,7 @@ model Articles {
 
 model CategoriesArticle {
   id        String     @id @default(uuid())
-  name      String
+  name      String     @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   deletedAt Boolean    @default(false)
