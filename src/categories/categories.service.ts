@@ -36,11 +36,29 @@ export class CategoriesService {
     })
   }
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
+  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
+    try {
+      return await this.prisma.categoriesArticle.update({
+        data: updateCategoryDto,
+        where: {
+          id
+        }
+      })
+
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(`Category with name: ${updateCategoryDto.name} , already exists`)
+        }
+      }
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} category`;
+  remove(id: string) {
+    return this.prisma.categoriesArticle.delete({
+      where:{
+        id
+      }
+    })
   }
 }
