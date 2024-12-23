@@ -28,6 +28,7 @@ model Articles {
 model CategoriesArticle {
   id        String     @id @default(uuid())
   name      String     @unique
+  image     String?    @default("example.png")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   deletedAt Boolean    @default(false)
